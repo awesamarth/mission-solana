@@ -1,0 +1,8 @@
+[project]
+name = "day_1"
+
+[toolchain]
+type = "solana"
+
+[testing]
+framework = "quasarsvm-kit"
