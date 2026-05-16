@@ -25,7 +25,7 @@ Use a modern Kit-native Solana stack:
 
 - Wallet connection and wallet UI foundation: `@solana/connector`
 - Core client, transaction, signer, and RPC layer: `@solana/kit`
-- Program framework: Quasar, now switching to Anchor
+- Program framework: Quasar
 - Program-specific TypeScript client: Quasar-generated `target/client/typescript/<program>/kit.ts`
 
 Avoid starting with Gill or Kite by default. They can be added later as optional convenience layers, but the initial learning path should keep the stack closer to Solana Kit and Quasar-generated clients.
@@ -67,3 +67,85 @@ Prioritize understanding these concepts in order:
 5. Quasar IDL and generated `kit.ts` clients.
 6. Full app loop: connect wallet, build instruction, create transaction message, sign/send, confirm, read/decode account state, decode errors/events.
 7. SPL tokens, ATAs, Token-2022, CPI, and program testing.
+
+## Quasar CLI Notes
+
+Quasar should be installed from the GitHub source until a stable release exists:
+
+```bash
+cargo install --git https://github.com/blueshift-gg/quasar quasar-cli --force
+```
+
+`quasar --version` may still print `0.0.0`; verify source install with `cargo install --list | rg quasar`.
+
+New source-built CLI init flags use the newer split options:
+
+```bash
+quasar init day_3 --yes --test-language typescript --ts-sdk kit --toolchain solana --template full
+```
+
+Older flags like `--framework quasarsvm-kit` belonged to the earlier/stale CLI interface.
+
+If the user selects Bun interactively, new projects use Bun and Vitest:
+
+- `package.json` has `"type": "module"`
+- test script is `vitest run`
+- `Quasar.toml` test command is `bun test`
+- first `quasar test` may run `bun install`
+
+Fresh source-built scaffolds have been verified to generate current account wrapper fields:
+
+```rust
+pub struct Initialize {
+    pub payer: Signer,
+    pub system_program: Program<SystemProgram>,
+}
+```
+
+## Legacy Scaffold Caveats
+
+`day_1` and `day_2` were created before reinstalling the GitHub-source CLI and contain local compatibility patches. For new projects such as `day_3`, do not assume these fixes are still needed. If a fresh scaffold fails, check generated files first before applying legacy patches.
+
+`day_3` was created with the source-built CLI using TypeScript + Kit + Bun + minimal template and verified with `quasar test`; it passed using the generated Vitest setup. Treat `day_3+` as the current scaffold style.
+
+Known legacy issues from the older scaffold:
+
+- Replace stale account wrapper fields like `&'info mut Signer` and `&'info Program<System>` with current wrapper fields like `Signer` and `Program<SystemProgram>`.
+- In `quasarsvm-kit` generated tests, pass `systemProgram: address("11111111111111111111111111111111")` whenever the generated client input requires `systemProgram`.
+- Do not rely on `SYSTEM_PROGRAM_ID` from `@blueshift-gg/quasar-svm/kit`; its type declarations may mention it while the runtime export is missing.
+- For TypeScript checks with generated Kit clients, use `moduleResolution: "bundler"` and add a local shim if the generated client imports `IInstruction` from `@solana/kit` while the installed Kit version exports `Instruction`.
+- Quasar macro `idl-build` cfg warnings are currently non-blocking.
+
+## Quasar Logging Notes
+
+`quasar test` with `quasarsvm-kit` runs in-process through QuasarSVM. It does not send transactions to Surfpool or `solana-test-validator`, so `solana logs` will not show output from those tests. Read logs from the test result instead:
+
+```ts
+const result = vm.processInstruction(instruction, accounts);
+console.log(result.logs.join("\n"));
+```
+
+For simple static on-chain messages, Quasar's prelude exposes `log` as a function:
+
+```rust
+log("Hello, world");
+```
+
+For logging variable values, use `solana_program_log::Logger` and add the dependency:
+
+```toml
+solana-program-log = "1.1.0"
+```
+
+```rust
+use solana_program_log::Logger;
+
+let mut logger = Logger::<64>::default();
+logger.append("You sent ");
+logger.append(a);
+logger.append(" and ");
+logger.append(b);
+logger.log();
+```
+
+`solana logs` is only useful for transactions sent to a running RPC/validator such as Surfpool after deploying the program there.
