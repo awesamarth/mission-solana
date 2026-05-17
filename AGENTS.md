@@ -108,6 +108,33 @@ pub struct Initialize {
 
 `day_3` was created with the source-built CLI using TypeScript + Kit + Bun + minimal template and verified with `quasar test`; it passed using the generated Vitest setup. Treat `day_3+` as the current scaffold style.
 
+For new projects, prefer the generated Quasar TypeScript client when it supports the instruction cleanly:
+
+```ts
+import { Day3Client } from "../target/client/typescript/day_3/kit";
+
+const client = new Day3Client();
+const ix = client.createAddInstruction({
+  payer: payer.address,
+  systemProgram: address("11111111111111111111111111111111"),
+  a: 7n,
+  b: 8n,
+});
+```
+
+Manual `Uint8Array`/`DataView` instruction encoding is useful for learning or working around generated-client bugs, but do not default to it when `createXInstruction` exists and works.
+
+Quasar instruction names and internal account-method names can differ:
+
+```rust
+#[instruction(discriminator = 0)]
+pub fn initialize(ctx: Ctx<Initialize>) -> Result<(), ProgramError> {
+    ctx.accounts.boaty_mc_boatface()
+}
+```
+
+This exposes an external instruction named `initialize` with discriminator `0`, even though the internal business logic method is `boaty_mc_boatface`. Rename the `#[instruction]` function itself if the generated client/test should expose a different instruction name.
+
 Known legacy issues from the older scaffold:
 
 - Replace stale account wrapper fields like `&'info mut Signer` and `&'info Program<System>` with current wrapper fields like `Signer` and `Program<SystemProgram>`.
@@ -149,3 +176,6 @@ logger.log();
 ```
 
 `solana logs` is only useful for transactions sent to a running RPC/validator such as Surfpool after deploying the program there.
+
+Anchor `#[msg("...")]` on errors is replaced in Quasar by `///` doc comments on `#[error_code]` variants; those doc comments become IDL/user-facing error descriptions.
+Anchor `err!(MyError::X)` is replaced in Quasar by `Err(MyError::X.into())`, or preferably `require!(condition, MyError::X)` for validations.
