@@ -142,6 +142,7 @@ Known legacy issues from the older scaffold:
 - Do not rely on `SYSTEM_PROGRAM_ID` from `@blueshift-gg/quasar-svm/kit`; its type declarations may mention it while the runtime export is missing.
 - For TypeScript checks with generated Kit clients, use `moduleResolution: "bundler"` and add a local shim if the generated client imports `IInstruction` from `@solana/kit` while the installed Kit version exports `Instruction`.
 - Quasar macro `idl-build` cfg warnings are currently non-blocking.
+- For heap allocation in Quasar, mark the instruction with `#[instruction(..., heap)]`, enable `default = ["alloc"]` in `Cargo.toml`, and import the needed alloc type such as `use alloc::vec::Vec;`. Do not add `extern crate alloc;` at crate root when a `#[program]` module has any `heap` instruction, because the macro injects it and an explicit import causes duplicate `alloc` errors.
 
 ## Quasar Logging Notes
 
