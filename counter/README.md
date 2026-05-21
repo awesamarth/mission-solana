@@ -1,0 +1,1 @@
+covers storage accounts, kit client, pda, simple counter
